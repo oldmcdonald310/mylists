@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Finished Watch/Play Lists</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .navbar {
+            background-color: #007bff;
+            overflow: hidden;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .navbar a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+            font-size: 1.1em;
+            transition: background-color 0.3s ease;
+        }
+        .navbar a:hover {
+            background-color: #0056b3;
+        }
+        .navbar a.active {
+            background-color: #0056b3; /* Darker blue for active tab */
+            font-weight: bold;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px 30px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px; /* Adjusted to allow navbar to sit on top */
+        }
+        h1, h2 {
+            color: #555;
+        }
+        .list-section {
+            margin-bottom: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+        .list-section:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        ul {
+            list-style: disc inside;
+            padding-left: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            margin-right: 5px;
+        }
+        li {
+            margin-bottom: 5px;
+            word-wrap: break-word;
+        }
+        input[type="text"] {
+            width: calc(100% - 22px); /* Account for padding and border */
+            padding: 10px;
+            margin-top: 15px; /* Adjusted margin since button is gone */
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+            font-size: 1em;
+        }
+        /* Removed button specific styles as buttons are removed */
+        .result { /* Kept .result style for consistency, though not used in finished.html */
+            margin-top: 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #28a745;
+            min-height: 1.2em;
+        }
+        .loading {
+            font-style: italic;
+            color: #888;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="index.html">Watch/Play Lists</a>
+        <a href="finished.html" class="active">Finished Lists</a>
+    </div>
+
+    <div class="container">
+        <h1>My Finished Watch/Play Lists</h1>
+
+        <div class="list-section">
+            <h2>Finished Movies</h2>
+            <ul id="finishedMoviesListDisplay">
+                <li class="loading">Loading finished movies...</li>
+            </ul>
+            <input type="text" id="finishedMovieSearch" placeholder="Search finished movies...">
+            </div>
+
+        <div class="list-section">
+            <h2>Finished TV Shows</h2>
+            <ul id="finishedTvShowsListDisplay">
+                <li class="loading">Loading finished TV shows...</li>
+            </ul>
+            <input type="text" id="finishedTvShowSearch" placeholder="Search finished TV shows...">
+            </div>
+
+        <div class="list-section">
+            <h2>Finished Games</h2>
+            <ul id="finishedGamesListDisplay">
+                <li class="loading">Loading finished games...</li>
+            </ul>
+            <input type="text" id="finishedGameSearch" placeholder="Search finished games...">
+            </div>
+    </div>
+
+    <script>
+        let finishedMoviesList = [];
+        let finishedTvShowsList = [];
+        let finishedGamesList = [];
+
+        function displayList(itemsToDisplay, listElementId) {
+            const ul = document.getElementById(listElementId);
+            ul.innerHTML = '';
+            
+            if (!itemsToDisplay || itemsToDisplay.length === 0) {
+                ul.innerHTML = '<li>No items found or loaded.</li>';
+                return;
+            }
+            itemsToDisplay.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item.trim();
+                ul.appendChild(li);
+            });
+        }
+
+        // Removed: Function to pick a random item (getRandomItem)
+
+        async function loadTextFile(url, listType, listElementId, searchInputId) { // Removed resultElementId, randomBtnId
+            const ul = document.getElementById(listElementId);
+            const searchInput = document.getElementById(searchInputId);
+
+            ul.innerHTML = '<li class="loading">Loading...</li>';
+            searchInput.disabled = true;
+
+            try {
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    ul.innerHTML = `<li class="error">Error loading file: ${response.status} ${response.statusText}</li>`;
+                    console.error(`Error fetching ${url}: ${response.status} ${response.statusText}`);
+                    return;
+                }
+
+                const content = await response.text();
+                const items = content.split(/\r\n|\n|\r/).map(line => line.trim()).filter(line => line !== '');
+
+                switch (listType) {
+                    case 'finishedMovies':
+                        finishedMoviesList = items;
+                        displayList(finishedMoviesList, listElementId);
+                        break;
+                    case 'finishedTvShows':
+                        finishedTvShowsList = items;
+                        displayList(finishedTvShowsList, listElementId);
+                        break;
+                    case 'finishedGames':
+                        finishedGamesList = items;
+                        displayList(finishedGamesList, listElementId);
+                        break;
+                    default:
+                        console.error("Unknown list type:", listType);
+                        ul.innerHTML = '<li class="error">Internal error loading list.</li>';
+                        return;
+                }
+
+                searchInput.disabled = false;
+
+                if (items.length > 0) {
+                    console.log(`${listType} list loaded with ${items.length} items.`);
+                } else {
+                    console.log(`${listType} file was empty or contained only whitespace.`);
+                }
+
+            } catch (error) {
+                ul.innerHTML = `<li class="error">Network or file reading error: ${error}</li>`;
+                console.error(`Workspace error for ${url}:`, error);
+                searchInput.disabled = true;
+            }
+        }
+
+        function setupSearch(listElementId, searchInputId, dataList) {
+            const searchInput = document.getElementById(searchInputId);
+            searchInput.addEventListener('keyup', (event) => {
+                const filter = event.target.value.toLowerCase();
+                const filteredItems = dataList.filter(item => 
+                    item.toLowerCase().includes(filter)
+                );
+                displayList(filteredItems, listElementId);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTextFile('./FinishedMovies.txt', 'finishedMovies', 'finishedMoviesListDisplay', 'finishedMovieSearch')
+                .then(() => {
+                    setupSearch('finishedMoviesListDisplay', 'finishedMovieSearch', finishedMoviesList);
+                });
+
+            loadTextFile('./FinishedTVShows.txt', 'finishedTvShows', 'finishedTvShowsListDisplay', 'finishedTvShowSearch')
+                .then(() => {
+                    setupSearch('finishedTvShowsListDisplay', 'finishedTvShowSearch', finishedTvShowsList);
+                });
+
+            loadTextFile('./FinishedGames.txt', 'finishedGames', 'finishedGamesListDisplay', 'finishedGameSearch')
+                .then(() => {
+                    setupSearch('finishedGamesListDisplay', 'finishedGameSearch', finishedGamesList);
+                });
+
+        });
+
+    </script>
+</body>
+</html>

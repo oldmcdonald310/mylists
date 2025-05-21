@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Watch/Play Lists</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .navbar {
+            background-color: #007bff;
+            overflow: hidden;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .navbar a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+            font-size: 1.1em;
+            transition: background-color 0.3s ease;
+        }
+        .navbar a:hover {
+            background-color: #0056b3;
+        }
+        .navbar a.active {
+            background-color: #0056b3; /* Darker blue for active tab */
+            font-weight: bold;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px 30px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px; /* Adjusted to allow navbar to sit on top */
+        }
+        h1, h2 {
+            color: #555;
+        }
+        .list-section {
+            margin-bottom: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+        .list-section:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        ul {
+            list-style: disc inside;
+            padding-left: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            margin-right: 5px;
+        }
+        li {
+            margin-bottom: 5px;
+            word-wrap: break-word;
+        }
+        input[type="text"] {
+            width: calc(100% - 22px); /* Account for padding and border */
+            padding: 10px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+            font-size: 1em;
+        }
+        button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #28a745;
+            min-height: 1.2em;
+        }
+        .loading {
+            font-style: italic;
+            color: #888;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="index.html" class="active">Watch/Play Lists</a>
+        <a href="finished.html">Finished Lists</a>
+    </div>
+
+    <div class="container">
+        <h1>My Watch/Play Lists</h1>
+
+        <div class="list-section">
+            <h2>Movies</h2>
+            <ul id="moviesListDisplay">
+                <li class="loading">Loading movies...</li>
+            </ul>
+            <input type="text" id="movieSearch" placeholder="Search movies...">
+            <button id="randomMovieBtn" disabled>Pick a Random Movie</button>
+            <p class="result" id="randomMovieResult"></p>
+        </div>
+
+        <div class="list-section">
+            <h2>TV Shows</h2>
+            <ul id="tvShowsListDisplay">
+                <li class="loading">Loading TV shows...</li>
+            </ul>
+            <input type="text" id="tvShowSearch" placeholder="Search TV shows...">
+            <button id="randomTvShowBtn" disabled>Pick a Random TV Show</button>
+            <p class="result" id="randomTvShowResult"></p>
+        </div>
+
+        <div class="list-section">
+            <h2>Games</h2>
+            <ul id="gamesListDisplay">
+                <li class="loading">Loading games...</li>
+            </ul>
+            <input type="text" id="gameSearch" placeholder="Search games...">
+            <button id="randomGameBtn" disabled>Pick a Random Game</button>
+            <p class="result" id="randomGameResult"></p>
+        </div>
+    </div>
+
+    <script>
+        let moviesList = [];
+        let tvShowsList = [];
+        let gamesList = [];
+
+        function displayList(itemsToDisplay, listElementId) {
+            const ul = document.getElementById(listElementId);
+            ul.innerHTML = '';
+            
+            if (!itemsToDisplay || itemsToDisplay.length === 0) {
+                ul.innerHTML = '<li>No items found or loaded.</li>';
+                return;
+            }
+            itemsToDisplay.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item.trim();
+                ul.appendChild(li);
+            });
+        }
+
+        function getRandomItem(listArray, resultElementId) {
+            const resultElement = document.getElementById(resultElementId);
+            if (!listArray || listArray.length === 0) {
+                resultElement.textContent = "List is empty!";
+                return;
+            }
+            const randomIndex = Math.floor(Math.random() * listArray.length);
+            resultElement.textContent = `Random pick: ${listArray[randomIndex].trim()}`;
+        }
+
+        async function loadTextFile(url, listType, listElementId, resultElementId, randomBtnId, searchInputId) {
+            const ul = document.getElementById(listElementId);
+            const randomBtn = document.getElementById(randomBtnId);
+            const resultElement = document.getElementById(resultElementId);
+            const searchInput = document.getElementById(searchInputId);
+
+            ul.innerHTML = '<li class="loading">Loading...</li>';
+            randomBtn.disabled = true;
+            searchInput.disabled = true;
+            resultElement.textContent = '';
+
+            try {
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    ul.innerHTML = `<li class="error">Error loading file: ${response.status} ${response.statusText}</li>`;
+                    console.error(`Error fetching ${url}: ${response.status} ${response.statusText}`);
+                    return;
+                }
+
+                const content = await response.text();
+                const items = content.split(/\r\n|\n|\r/).map(line => line.trim()).filter(line => line !== '');
+
+                switch (listType) {
+                    case 'movies':
+                        moviesList = items;
+                        displayList(moviesList, listElementId);
+                        break;
+                    case 'tvshows':
+                        tvShowsList = items;
+                        displayList(tvShowsList, listElementId);
+                        break;
+                    case 'games':
+                        gamesList = items;
+                        displayList(gamesList, listElementId);
+                        break;
+                    default:
+                        console.error("Unknown list type:", listType);
+                        ul.innerHTML = '<li class="error">Internal error loading list.</li>';
+                        return;
+                }
+
+                randomBtn.disabled = items.length === 0;
+                searchInput.disabled = false;
+
+                if (items.length > 0) {
+                    console.log(`${listType} list loaded with ${items.length} items.`);
+                } else {
+                    console.log(`${listType} file was empty or contained only whitespace.`);
+                }
+
+            } catch (error) {
+                ul.innerHTML = `<li class="error">Network or file reading error: ${error}</li>`;
+                console.error(`Workspace error for ${url}:`, error);
+                randomBtn.disabled = true;
+                searchInput.disabled = true;
+            }
+        }
+
+        function setupSearch(listElementId, searchInputId, dataList) {
+            const searchInput = document.getElementById(searchInputId);
+            searchInput.addEventListener('keyup', (event) => {
+                const filter = event.target.value.toLowerCase();
+                const filteredItems = dataList.filter(item => 
+                    item.toLowerCase().includes(filter)
+                );
+                displayList(filteredItems, listElementId);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTextFile('./Movies.txt', 'movies', 'moviesListDisplay', 'randomMovieResult', 'randomMovieBtn', 'movieSearch')
+                .then(() => {
+                    setupSearch('moviesListDisplay', 'movieSearch', moviesList);
+                });
+
+            loadTextFile('./TVShows.txt', 'tvshows', 'tvShowsListDisplay', 'randomTvShowResult', 'randomTvShowBtn', 'tvShowSearch')
+                .then(() => {
+                    setupSearch('tvShowsListDisplay', 'tvShowSearch', tvShowsList);
+                });
+
+            loadTextFile('./Games.txt', 'games', 'gamesListDisplay', 'randomGameResult', 'randomGameBtn', 'gameSearch')
+                .then(() => {
+                    setupSearch('gamesListDisplay', 'gameSearch', gamesList);
+                });
+
+            document.getElementById('randomMovieBtn').addEventListener('click', function() {
+                getRandomItem(moviesList, 'randomMovieResult');
+            });
+
+            document.getElementById('randomTvShowBtn').addEventListener('click', function() {
+                getRandomItem(tvShowsList, 'randomTvShowResult');
+            });
+
+            document.getElementById('randomGameBtn').addEventListener('click', function() {
+                getRandomItem(gamesList, 'randomGameResult');
+            });
+        });
+
+    </script>
+</body>
+</html>
